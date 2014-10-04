@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <script src='https://cdn.firebase.com/js/client/1.0.15/firebase.js'></script>
+    <script src='https://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js'></script>
+    <link rel='stylesheet' type='text/css' href='/resources/tutorial/css/example.css'>
+  </head>
+  <body>
+    <div id='sessionDiv'>
+      <input type='text' id='nameInput' placeholder='Name'>
+      <input type='text' id='sessionID' placeholder='Session ID'>
+    </div>
+    <div id='messagesDiv'>
+      -Song Requests-
+    </div>
+
+    <input type='text' id='messageInput' placeholder='Message'>
+    <script>
+      
+      var myDataRef = new Firebase('https://scratchapp.firebaseio.com/');
+      $('#messageInput').keypress(function (e) {
+        var session = $('#sessionID').val();
+        if (e.keyCode == 13 && session.length > 0) {
+
+          var name = $('#nameInput').val();
+          var text = $('#messageInput').val();
+          $.ajax({
+            url: '/request',
+            type: 'POST',
+            dataType: 'json',
+            contentType: 'application/json',
+            data: JSON.stringify({
+              "session": session,
+              "user": name,
+              "song": text
+            })
+          })
+
+          $('#messageInput').val('');
+          
+          // document.getElementById("messagesDiv").innerHTML = "-Song Requests-"
+          // myDataRef.child($('#sessionID').val() + '/songs').on('child_added', function(snapshot) {
+            
+          //   var message = snapshot.val();
+          //   displayChatMessage(message.user, message.song);
+          // });
+        }
+      });
+      
+      function displayChatMessage(name, text) {
+        $('<div/>').text(text).prepend($('<em/>').text(name+': ')).appendTo($('#messagesDiv'));
+        $('#messagesDiv')[0].scrollTop = $('#messagesDiv')[0].scrollHeight;
+      };
+    </script>
+  </body>
+</html>
