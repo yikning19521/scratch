@@ -44,12 +44,29 @@ app.get('/api/dj', function(req, res) {
 });
 
 app.delete('/api/dj', function(req,res) {
+	var dj_id = req.body.dj_id;
+	console.log(dj_id);
+	var track_id = req.body.track_id;
+	console.log(track_id);
+	var track = rootRef.child(dj_id).child("songs").child(track_id);
+
+	track.once('value', function(snapshot) {
+		var exists = (snapshot.val() !== null);
+		if (exists) {
+			console.log("Removing song from the database.");
+		    track.remove();
+		    res.status(200).end();
+		} else {
+			console.log("The track does not exist");
+			res.status(409).end();
+		}
+	});
 });
 
 
 
 //USER STUFF
-app.post('/api/tracks', function(req, res) {
+app.get('/api/tracks', function(req, res) {
 
 	var dj_id = req.body.dj_id;
 	var track = req.body.track;
@@ -60,7 +77,7 @@ app.post('/api/tracks', function(req, res) {
 		if (exists) {
 			console.log("Exists");
 			var songs = kid.child("songs");
-			songs.push({song_data: track});
+			songs.push({song_data: track, counter: 1});
 			res.status(200).end();
 		} else {
 			console.log("DNE");
@@ -90,31 +107,36 @@ function checkIfUserExists(userId) {
   });
 }
 
-app.get('/api/tracks', function(req, res) {
-})
+app.post('/api/tracks', function(req, res) {
+	var dj_id = req.body.dj_id;
+	var songs = rootRef.child(dj_id).child("songs");
+	songs.on('child_added', function(snapshot) {
+		var song = snapshot.val();
+		console.log(song.name());
+		res.status(200).end();
+	});
+});
 
 app.put('/api/tracks', function(req, res) {
-});
-
-
-/**
-app.post('/request', function(req, res) {
-	console.log('recieved song request for session: ' + req.body.session + ': ' + req.body.song);
-	var songRef = rootRef.child(req.body.session + '/songs');
-	songRef.push({
-		user: req.body.user,
-		song: req.body.song
+	var dj_id = req.body.dj_id;
+	var track_id = req.body.track_id;
+	var trackRef = rootRef.child(dj_id).child("songs").child(track_id);
+	var val = trackRef.child('counter');
+	val.transaction(function(currentRank) { 
+		return currentRank+1;
+	}, function(error, committed, snapshot) {
+		if (error) {
+			console.log('Transaction failed abnormally!', error);
+		} else if (!committed) {
+			console.log("fail to increment the counter");
+			res.status(409).end();
+		} else {
+			console.log('counter incremented');
+			res.status(200).end();
+		}
 	});
-	res.status(200).end();
- 
 });
 
-app.post('/skip', function(req, res) {
-	console.log('recieved skip request for session: ' + req.body.session + ': ' + req.body.song);
-	//if skip exceeds some threshhold, then foward skip request to host
-});
-
-*/
 
 var server = app.listen(3000, function() {
     console.log('Listening on port %d', server.address().port);
