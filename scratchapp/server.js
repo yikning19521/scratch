@@ -50,23 +50,35 @@ app.get('/api/dj', function(req, res) {
 
 app.delete('/api/dj', function(req,res) {
 	var dj_id = req.body.dj_id;
-	console.log(dj_id);
 	var track_id = req.body.track_id;
-	console.log(track_id);
-	var track = rootRef.child(dj_id).child("songs").child(track_id);
-
-
-	track.once('value', function(snapshot) {
-		var exists = (snapshot.val() !== null);
-		if (exists) {
-			console.log("Removing song from the database.");
-		    track.remove();
-		    res.status(200).end();
-		} else {
-			console.log("The track does not exist");
-			res.status(409).end();
-		}
-	});
+	if (track_id != null) {
+		var track = rootRef.child(dj_id).child("songs").child(track_id);
+		track.once('value', function(snapshot) {
+			var exists = (snapshot.val() !== null);
+			if (exists) {
+				console.log("Removing song from the database.");
+				track.remove();
+				res.status(200).end();
+			} else {
+				console.log("The track does not exist");
+				res.status(409).end();
+			}
+		});
+	} else {
+		var djRef = rootRef.child(dj_id);
+		djRef.once('value', function(snapshot) {
+			var exists = (snapshot.val() !== null);
+			if (exists) {
+				console.log("Removing the dj " + dj_id + " from the database.");
+				djRef.remove();
+				res.status(200).end();
+			} else {
+				console.log("This DJ does not exist.");
+				res.status(409).end();
+			}
+		});
+	}
+		
 });
 
 
