@@ -7,6 +7,7 @@ app.use(bodyParser.json());       // to support JSON-encoded bodies
 var Firebase = require("firebase");
 var rootRef = new Firebase('https://scratchapp.firebaseio.com/');
 
+var displayNum = 10;
 
 
 //DJ STUFF
@@ -41,6 +42,10 @@ app.post('/api/dj', function(req, res) {
 });
 
 app.get('/api/dj', function(req, res) {
+	var dj_id = req.body.dj_id;
+	var songs = rootRef.child(dj_id).child("songs");
+	/** See below. */
+	number_elements(songs, dj_id, res);
 });
 
 app.delete('/api/dj', function(req,res) {
@@ -49,6 +54,7 @@ app.delete('/api/dj', function(req,res) {
 	var track_id = req.body.track_id;
 	console.log(track_id);
 	var track = rootRef.child(dj_id).child("songs").child(track_id);
+
 
 	track.once('value', function(snapshot) {
 		var exists = (snapshot.val() !== null);
@@ -66,7 +72,7 @@ app.delete('/api/dj', function(req,res) {
 
 
 //USER STUFF
-app.get('/api/tracks', function(req, res) {
+app.post('/api/tracks', function(req, res) {
 
 	var dj_id = req.body.dj_id;
 	var track = req.body.track;
@@ -88,34 +94,40 @@ app.get('/api/tracks', function(req, res) {
 });
 
 
-function userExistsCallback(userId, exists) {
-  if (exists) {
-    console.log('user ' + userId + ' exists!');
-	return true;
-  } else {
-    console.log('user ' + userId + ' does not exist!');
-	return false;
-  }
-}
- 
-// Tests to see if /users/<userId> has any data. 
-function checkIfUserExists(userId) {
-  var usersRef = rootRef;
-  usersRef.child(userId).once('value', function(snapshot) {
-    var exists = (snapshot.val() !== null);
-    userExistsCallback(userId, exists);
-  });
-}
-
-app.post('/api/tracks', function(req, res) {
+app.get('/api/tracks', function(req, res) {
 	var dj_id = req.body.dj_id;
 	var songs = rootRef.child(dj_id).child("songs");
-	songs.on('child_added', function(snapshot) {
-		var song = snapshot.val();
-		console.log(song.name());
-		res.status(200).end();
-	});
+	number_elements(songs, dj_id, res);
 });
+
+function number_elements(elems, dj_id, res) {
+	elems.on('value', function(snapshot) {
+		var number = snapshot.numChildren();
+		set_track_list(elems, number, dj_id, res);
+	});
+}
+
+function set_track_list(songs, num, dj_id, res) {
+	var counter = 0;
+	var lst = [];
+	songs.on('child_added', function(snapshot) {
+		if ((counter < displayNum) && (counter < num)) {
+			var song_id = snapshot.name();
+			var skip_count = snapshot.child('counter').val();
+			var song_data = snapshot.child('song_data').val();
+			var curr_track = { "_id": song_id, "dj_id": dj_id, "track" : song_data, "skip_count": skip_count };
+			lst.push(curr_track);
+		}
+		counter += 1;
+		if ((counter == displayNum) || (counter == num)) {
+			res.status(200);
+			res.send({ "tracks" : JSON.parse(JSON.stringify(lst)) });
+			
+		}		
+	});
+}
+
+
 
 app.put('/api/tracks', function(req, res) {
 	var dj_id = req.body.dj_id;
